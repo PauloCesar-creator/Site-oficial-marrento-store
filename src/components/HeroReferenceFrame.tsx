@@ -153,7 +153,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
     const smoothRenderLoop = () => {
       const diff = targetFrameRef.current - currentRenderedFrameRef.current;
       if (Math.abs(diff) > 0.01) {
-        currentRenderedFrameRef.current += diff * 0.28;
+        currentRenderedFrameRef.current += diff * 0.45;
         renderFrame(currentRenderedFrameRef.current);
         setCurrentFrameNum(Math.max(1, Math.min(TOTAL_FRAMES, Math.round(currentRenderedFrameRef.current))));
       }
@@ -225,7 +225,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
 
     // 2. ScrollTrigger Pinning & Sequence: Scrubbing frames -> Exit Texts -> Expand Section 2 from center
     const isMobile = window.innerWidth < 768;
-    const scrollDistance = isMobile ? '+=2600' : '+=3800';
+    const scrollDistance = isMobile ? '+=1800' : '+=2600';
 
     const pinTrigger = ScrollTrigger.create({
       trigger: containerRef.current,
@@ -233,7 +233,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
       end: scrollDistance,
       pin: pinTargetRef.current,
       pinSpacing: true,
-      scrub: 1.5,
+      scrub: 1.25, // Fluid, buttery smooth scrub between 1.0 and 1.5
       anticipatePin: 1,
       onUpdate: (self) => {
         const progress = self.progress;
@@ -467,14 +467,21 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
               />
             </p>
 
-            {/* Mouse Scroll Indicator */}
-            <div
+            {/* Mouse Scroll Indicator - Click to smooth scroll */}
+            <button
+              type="button"
               ref={mouseIndicatorRef}
               id="mouse-scroll-indicator"
-              className="w-4.5 h-7.5 sm:w-5.5 sm:h-8.5 border border-zinc-400/80 rounded-full flex items-start justify-center p-1 shadow-sm will-change-transform"
+              aria-label="Rolar para a vitrine interativa"
+              onClick={() => {
+                const isMob = typeof window !== 'undefined' && window.innerWidth < 768;
+                const targetPos = (isMob ? 1800 : 2600) * 0.95;
+                window.scrollTo({ top: targetPos, behavior: 'smooth' });
+              }}
+              className="w-5 h-8 sm:w-6 sm:h-9 border border-zinc-400/80 hover:border-amber-400 rounded-full flex items-start justify-center p-1 shadow-sm will-change-transform pointer-events-auto cursor-pointer transition-colors duration-300 group bg-black/20 backdrop-blur-xs"
             >
-              <span className="w-1 h-2 bg-zinc-200 rounded-full animate-bounce mt-1" />
-            </div>
+              <span className="w-1 h-2 bg-zinc-200 group-hover:bg-amber-300 rounded-full animate-bounce mt-1 transition-colors duration-300" />
+            </button>
           </footer>
         </section>
 
