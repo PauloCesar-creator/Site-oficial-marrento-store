@@ -20,15 +20,15 @@ export default function App() {
 
     // Initialize Lenis with optimized smooth, responsive scrolling locked to vertical orientation
     const lenis = new Lenis({
-      duration: 1.35, // Smooth, luxurious scroll glide between 1.0 and 1.5
+      duration: 0.95, // Buttery smooth and ultra-responsive
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical', // Strictly block lateral gestures from triggering scroll
       smoothWheel: true,
-      wheelMultiplier: 1.12, // Responsive and effortless scroll glide
-      touchMultiplier: 1.3,
+      wheelMultiplier: 1.0, // Natural 1:1 wheel and trackpad response
+      touchMultiplier: 1.0,
       infinite: false,
-      syncTouch: true,
+      syncTouch: false, // Never hijack mobile touch - lets smartphones use native 120Hz touch physics
     });
 
     lenisRef.current = lenis;

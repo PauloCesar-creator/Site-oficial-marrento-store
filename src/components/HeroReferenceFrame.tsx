@@ -40,7 +40,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
   const secondSectionLayerRef = useRef<HTMLDivElement>(null);
 
   const targetFrameRef = useRef(1);
-  const currentRenderedFrameRef = useRef(1);
+  const lastRenderedIndexRef = useRef(-1);
   const imagesRef = useRef<HTMLImageElement[]>([]);
 
   useEffect(() => {
@@ -62,7 +62,8 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
       }
-      renderFrame(currentRenderedFrameRef.current);
+      lastRenderedIndexRef.current = -1;
+      renderFrame(targetFrameRef.current);
     };
 
     const images: HTMLImageElement[] = [];
@@ -72,7 +73,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
 
     let loadedCount = 0;
 
-    // Preload all 200 frame images from assets/frames/
+    // Preload all 200 frame images from assets/frames/ with asynchronous GPU decoding
     for (let i = 1; i <= TOTAL_FRAMES; i++) {
       const img = new Image();
       const frameKey = `/assets/frames/ezgif-frame-${padZero(i)}.jpg`;
@@ -81,15 +82,15 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
       img.onload = () => {
         loadedCount++;
         setLoadedFramesCount(loadedCount);
-        if (i === 1) {
+        if (typeof img.decode === 'function') {
+          img.decode().catch(() => {});
+        }
+        if (i === 1 && !isFirstFrameLoaded) {
           setIsFirstFrameLoaded(true);
           renderFrame(1);
-        } else if (Math.abs(i - targetFrameRef.current) < 2) {
-          renderFrame(currentRenderedFrameRef.current);
         }
       };
       img.onerror = () => {
-        // Retry with alternative path if needed
         if (img.src !== frameKey) {
           img.src = frameKey;
         }
@@ -104,6 +105,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
       if (!ctx) return;
 
       const targetIdx = Math.max(1, Math.min(TOTAL_FRAMES, Math.round(index))) - 1;
+      if (lastRenderedIndexRef.current === targetIdx) return; // Skip duplicate frame painting
       
       // Find exact or nearest loaded frame for zero flash
       let img = imagesRef.current[targetIdx];
@@ -123,6 +125,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
       }
 
       if (img && img.complete && img.naturalWidth > 0) {
+        lastRenderedIndexRef.current = targetIdx;
         ctx.clearRect(0, 0, currentCanvas.width, currentCanvas.height);
 
         // Aspect ratio handling: preserve proportion with optical prominence and perfect mobile framing
@@ -147,19 +150,6 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
         );
       }
     }
-
-    // 60FPS RAF Smooth Lerp Render Loop
-    let animFrameId: number;
-    const smoothRenderLoop = () => {
-      const diff = targetFrameRef.current - currentRenderedFrameRef.current;
-      if (Math.abs(diff) > 0.01) {
-        currentRenderedFrameRef.current += diff * 0.45;
-        renderFrame(currentRenderedFrameRef.current);
-        setCurrentFrameNum(Math.max(1, Math.min(TOTAL_FRAMES, Math.round(currentRenderedFrameRef.current))));
-      }
-      animFrameId = requestAnimationFrame(smoothRenderLoop);
-    };
-    animFrameId = requestAnimationFrame(smoothRenderLoop);
 
     updateCanvasSize();
 
@@ -225,7 +215,7 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
 
     // 2. ScrollTrigger Pinning & Sequence: Scrubbing frames -> Exit Texts -> Expand Section 2 from center
     const isMobile = window.innerWidth < 768;
-    const scrollDistance = isMobile ? '+=1800' : '+=2600';
+    const scrollDistance = isMobile ? '+=1500' : '+=2200';
 
     const pinTrigger = ScrollTrigger.create({
       trigger: containerRef.current,
@@ -233,18 +223,20 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
       end: scrollDistance,
       pin: pinTargetRef.current,
       pinSpacing: true,
-      scrub: 1.25, // Fluid, buttery smooth scrub between 1.0 and 1.5
+      scrub: 0.05, // Instant 1:1 hardware responsive scrubbing with zero delay
       anticipatePin: 1,
       onUpdate: (self) => {
         const progress = self.progress;
 
-        // Frames 1 to 200 scrubbed during 0.00 -> 0.60 progress
+        // Frames 1 to 200 scrubbed during 0.00 -> 0.60 progress with immediate synchronous rendering
         const frameProgress = Math.min(1, progress / 0.60);
         const targetFrame = Math.max(
           1,
           Math.min(TOTAL_FRAMES, Math.round(frameProgress * (TOTAL_FRAMES - 1)) + 1)
         );
         targetFrameRef.current = targetFrame;
+        renderFrame(targetFrame);
+        setCurrentFrameNum(targetFrame);
 
         // Section 1 Exit Animations (progress 0.55 -> 0.80)
         if (progress > 0.55) {
@@ -369,7 +361,6 @@ export const HeroReferenceFrame: React.FC<HeroReferenceFrameProps> = ({
     window.addEventListener('resize', updateCanvasSize);
 
     return () => {
-      cancelAnimationFrame(animFrameId);
       entranceTl.kill();
       pinTrigger.kill();
       window.removeEventListener('resize', updateCanvasSize);
