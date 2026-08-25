@@ -1,0 +1,8 @@
+{
+  "name": "Remix Marrento | Acessórios de Alto Padrão | Segunda Versão",
+  "description": "Layout exclusivo de alta precisão para acessórios e relojoaria de luxo Marrento com design sofisticado e experiência interativa.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
